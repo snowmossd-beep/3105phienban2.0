@@ -305,6 +305,15 @@ struct CompatValueLink<Value: Hashable, Label: View, Destination: View>: View {
 
 extension View {
     @ViewBuilder
+    func scrollIndicatorsHiddenCompat() -> some View {
+        if #available(iOS 16.0, *) {
+            self.scrollIndicators(.hidden)
+        } else {
+            self
+        }
+    }
+
+    @ViewBuilder
     func compatNavigationDestination<D: View>(
         isPresented: Binding<Bool>,
         @ViewBuilder _ destination: @escaping () -> D
@@ -439,6 +448,31 @@ struct RepositoryRecordLink<Label: View>: View {
             NavigationLink(value: record) { label }
         } else {
             NavigationLink(destination: RepositoryPackageDetailView(record: record)) { label }
+        }
+    }
+}
+
+struct FitHorizontal<Wide: View, Narrow: View>: View {
+    private let wide: Wide
+    private let narrow: Narrow
+    private let fallbackToNarrow: Bool
+
+    init(fallbackToNarrow: Bool = false, wide: () -> Wide, narrow: () -> Narrow) {
+        self.wide = wide()
+        self.narrow = narrow()
+        self.fallbackToNarrow = fallbackToNarrow
+    }
+
+    var body: some View {
+        if #available(iOS 16.0, *) {
+            ViewThatFits(in: .horizontal) {
+                wide
+                narrow
+            }
+        } else if fallbackToNarrow {
+            narrow
+        } else {
+            wide
         }
     }
 }
