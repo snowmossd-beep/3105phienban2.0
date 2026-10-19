@@ -82,7 +82,18 @@ struct FileBrowserView: View {
         _currentPath = State(initialValue: containerPath)
     }
 
-    var body: some View {
+    @ViewBuilder
+    private func destinationView(_ destination: FileBrowserDestination) -> some View {
+        FileBrowserView(
+            containerPath: destination.containerPath,
+            startPath: destination.startPath,
+            title: destination.title,
+            bundleID: destination.bundleID,
+            filesTabSession: filesTabSession
+        )
+    }
+
+    private var browserContent: some View {
         VStack(spacing: 0) {
             AppSearchField(
                 text: $fileSearchText,
@@ -123,83 +134,82 @@ struct FileBrowserView: View {
                 .animation(interfaceAnimation, value: overlayState)
             }
         }
-        .navigationTitle(currentPath == containerPath ? title : (currentPath as NSString).lastPathComponent)
-        .navigationBarTitleDisplayMode(.inline)
-        .compatNavigationDestination(for: FileBrowserDestination.self) { destination in
-            FileBrowserView(
-                containerPath: destination.containerPath,
-                startPath: destination.startPath,
-                title: destination.title,
-                bundleID: destination.bundleID,
-                filesTabSession: filesTabSession
-            )
-        }
-        .toolbar {
+    }
+
+    @ToolbarContentBuilder
+    private var browserToolbar: some ToolbarContent {
+        ToolbarItem(placement: .navigationBarTrailing) {
             if let filesTabSession {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    FilesTabToolbarButton(session: filesTabSession)
-                }
+                FilesTabToolbarButton(session: filesTabSession)
             }
-            ToolbarItem(placement: .navigationBarTrailing) {
-                sortMenu
+        }
+        ToolbarItem(placement: .navigationBarTrailing) {
+            sortMenu
+        }
+        ToolbarItem(placement: .navigationBarTrailing) {
+            Button(isSelecting
+                   ? language.text("common.cancel")
+                   : language.text("browser.select")) {
+                toggleSelectionMode()
             }
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button(isSelecting
-                       ? language.text("common.cancel")
-                       : language.text("browser.select")) {
-                    toggleSelectionMode()
-                }
-                .disabled(activityText != nil || importSession != nil)
-            }
-            ToolbarItem(placement: .navigationBarTrailing) {
-                if isSelecting {
-                    Button(selectionActionTitle, action: toggleAllSelection)
-                        .disabled(entries.isEmpty)
-                } else {
-                    Menu {
-                        if let payload = fileOperationCoordinator.payload {
-                            Button {
-                                beginPaste(payload)
-                            } label: {
-                                Label(
-                                    language.text("browser.paste_count", Int64(payload.itemCount)),
-                                    systemImage: "doc.on.clipboard"
-                                )
-                            }
-                            Button(role: .destructive) {
-                                fileOperationCoordinator.clear()
-                            } label: {
-                                Label(language.text("browser.clear_clipboard"), systemImage: "xmark")
-                            }
-                            Divider()
-                        }
+            .disabled(activityText != nil || importSession != nil)
+        }
+        ToolbarItem(placement: .navigationBarTrailing) {
+            if isSelecting {
+                Button(selectionActionTitle, action: toggleAllSelection)
+                    .disabled(entries.isEmpty)
+            } else {
+                Menu {
+                    if let payload = fileOperationCoordinator.payload {
                         Button {
-                            requestImportPicker()
+                            beginPaste(payload)
                         } label: {
                             Label(
-                                language.text("browser.import_files"),
-                                systemImage: "square.and.arrow.down"
+                                language.text("browser.paste_count", Int64(payload.itemCount)),
+                                systemImage: "doc.on.clipboard"
                             )
                         }
+                        Button(role: .destructive) {
+                            fileOperationCoordinator.clear()
+                        } label: {
+                            Label(language.text("browser.clear_clipboard"), systemImage: "xmark")
+                        }
                         Divider()
-                        Button {
-                            presentNamePrompt(.createFile)
-                        } label: {
-                            Label(language.text("browser.new_file"), systemImage: "doc.badge.plus")
-                        }
-                        Button {
-                            presentNamePrompt(.createFolder)
-                        } label: {
-                            Label(language.text("browser.new_folder"), systemImage: "folder.badge.plus")
-                        }
-                    } label: {
-                        Image(systemName: "plus")
                     }
-                    .disabled(activityText != nil || importSession != nil || transferSession != nil)
-                    .accessibilityLabel(language.text("browser.add"))
+                    Button {
+                        requestImportPicker()
+                    } label: {
+                        Label(
+                            language.text("browser.import_files"),
+                            systemImage: "square.and.arrow.down"
+                        )
+                    }
+                    Divider()
+                    Button {
+                        presentNamePrompt(.createFile)
+                    } label: {
+                        Label(language.text("browser.new_file"), systemImage: "doc.badge.plus")
+                    }
+                    Button {
+                        presentNamePrompt(.createFolder)
+                    } label: {
+                        Label(language.text("browser.new_folder"), systemImage: "folder.badge.plus")
+                    }
+                } label: {
+                    Image(systemName: "plus")
                 }
+                .disabled(activityText != nil || importSession != nil || transferSession != nil)
+                .accessibilityLabel(language.text("browser.add"))
             }
         }
+    }
+
+    private var browserChrome: some View {
+        browserContent
+        .navigationTitle(currentPath == containerPath ? title : (currentPath as NSString).lastPathComponent)
+        .navigationBarTitleDisplayMode(.inline)
+        .compatNavigationDestination(for: FileBrowserDestination.self) { destinationView($0) }
+        .toolbar { browserToolbar }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if isSelecting {
                 FileSelectionActionBar(
@@ -230,6 +240,10 @@ struct FileBrowserView: View {
         .animation(interfaceAnimation, value: isSelecting)
         .animation(interfaceAnimation, value: fileOperationCoordinator.payload)
         .onAppear { load() }
+    }
+
+    private var browserSheets: some View {
+        browserChrome
         .sheet(item: $replacementRequest) { request in
             FileDocumentPicker(
                 allowsMultipleSelection: false,
@@ -260,6 +274,10 @@ struct FileBrowserView: View {
             )
             .ignoresSafeArea()
         }
+    }
+
+    var body: some View {
+        browserSheets
         .overlay {
             ZStack {
                 if let activityText {
@@ -403,13 +421,14 @@ struct FileBrowserView: View {
             .buttonStyle(.plain)
             .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 12))
         } else if entry.isDirectory {
-            NavigationLink(
+            CompatValueLink(
                 value: FileBrowserDestination(
                     containerPath: containerPath,
                     startPath: entry.path,
                     title: entry.name,
                     bundleID: bundleID
-                )
+                ),
+                makeDestination: { destinationView($0) }
             ) {
                 FileEntryRow(entry: entry, language: language, selectionState: nil)
             }

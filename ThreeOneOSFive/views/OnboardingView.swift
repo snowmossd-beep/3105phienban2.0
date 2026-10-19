@@ -236,19 +236,20 @@ struct OnboardingView: View {
                             + (v.publicBeta.map {
                                 " · " + language.text("onboarding.public_beta", "\($0)")
                             } ?? "")
-                        ViewThatFits(in: .horizontal) {
+                        FitHorizontal(fallbackToNarrow: false, wide: {
                             HStack(spacing: 12) {
                                 Text(betaLabel)
                                 Spacer()
                                 Text(v.build)
                                     .font(.caption.monospaced().weight(.medium))
                             }
+                        }, narrow: {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(betaLabel)
                                 Text(v.build)
                                     .font(.caption.monospaced().weight(.medium))
                             }
-                        }
+                        })
                         .font(.caption.weight(.medium))
                         .foregroundStyle(.secondary)
                         .padding(.leading, 24)
@@ -323,7 +324,7 @@ struct OnboardingView: View {
     }
 
     private func versionRow(icon: String, title: String, value: String, color: Color) -> some View {
-        ViewThatFits(in: .horizontal) {
+        FitHorizontal(fallbackToNarrow: false, wide: {
             HStack(spacing: 10) {
                 Image(systemName: icon).foregroundStyle(color)
                 Text(title).fontWeightCompat(.semibold)
@@ -332,6 +333,7 @@ struct OnboardingView: View {
                     .font(.subheadline.monospaced())
                     .foregroundStyle(.secondary)
             }
+        }, narrow: {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 10) {
                     Image(systemName: icon)
@@ -345,7 +347,7 @@ struct OnboardingView: View {
                     .foregroundStyle(.secondary)
                     .padding(.leading, 26)
             }
-        }
+        })
         .font(.subheadline)
         .padding(12)
         .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
@@ -367,14 +369,15 @@ struct OnboardingView: View {
 
     private var controls: some View {
         VStack(spacing: 12) {
-            ViewThatFits(in: .horizontal) {
+            FitHorizontal(fallbackToNarrow: true, wide: {
                 HStack(spacing: 12) {
                     controlButtons
                 }
+            }, narrow: {
                 VStack(spacing: 10) {
                     controlButtons
                 }
-            }
+            })
             .frame(maxWidth: 560)
             .padding(.horizontal, 20)
         }
