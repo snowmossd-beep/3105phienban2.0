@@ -84,38 +84,55 @@ struct ContentView: View {
         }
     }
 
+    @ViewBuilder
     private var regularLayout: some View {
-        NavigationSplitView {
-            List {
-                ForEach(featureVisibility.visibleSections) { section in
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.18)) {
-                            tabNavigation.select(section.rawValue)
-                        }
-                    } label: {
-                        Label(language.text(section.titleKey), systemImage: section.systemImage)
-                            .fontWeightCompat(section.rawValue == tabNavigation.selectedTab ? .semibold : .regular)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .listRowBackground(
-                        section.rawValue == tabNavigation.selectedTab
-                            ? AppTheme.accent.opacity(0.14)
-                            : Color.clear
-                    )
-                    .accessibilityAddTraits(
-                        section.rawValue == tabNavigation.selectedTab ? .isSelected : []
-                    )
-                }
+        if #available(iOS 16.0, *) {
+            NavigationSplitView {
+                sidebar
+                    .navigationSplitViewColumnWidth(min: 210, ideal: 240, max: 300)
+            } detail: {
+                sectionDetail
             }
-            .navigationTitle("3105")
-            .navigationSplitViewColumnWidth(min: 210, ideal: 240, max: 300)
-        } detail: {
-            sectionContent(selectedVisibleSection)
-                .id(selectedVisibleSection.rawValue)
+            .navigationSplitViewStyle(.balanced)
+        } else {
+            NavigationView {
+                sidebar
+                sectionDetail
+            }
+            .navigationViewStyle(.columns)
         }
-        .navigationSplitViewStyle(.balanced)
+    }
+
+    private var sectionDetail: some View {
+        sectionContent(selectedVisibleSection)
+            .id(selectedVisibleSection.rawValue)
+    }
+
+    private var sidebar: some View {
+    List {
+        ForEach(featureVisibility.visibleSections) { section in
+            Button {
+                withAnimation(.easeInOut(duration: 0.18)) {
+                    tabNavigation.select(section.rawValue)
+                }
+            } label: {
+                Label(language.text(section.titleKey), systemImage: section.systemImage)
+                    .fontWeightCompat(section.rawValue == tabNavigation.selectedTab ? .semibold : .regular)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .listRowBackground(
+                section.rawValue == tabNavigation.selectedTab
+                    ? AppTheme.accent.opacity(0.14)
+                    : Color.clear
+            )
+            .accessibilityAddTraits(
+                section.rawValue == tabNavigation.selectedTab ? .isSelected : []
+            )
+        }
+    }
+        .navigationTitle("3105")
     }
 
     @ViewBuilder
