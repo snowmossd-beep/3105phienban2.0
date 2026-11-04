@@ -126,7 +126,7 @@ final class PatchProjectStore: ObservableObject {
             } catch let error as PatchPackageError {
                 await self?.failOperation(error)
             } catch {
-                await self?.failOperation(.unsupportedFormat)
+                await self?.failOperation(.unsupportedFormat, underlying: error)
             }
         }
     }
@@ -418,8 +418,11 @@ final class PatchProjectStore: ObservableObject {
         alert = PatchStoreAlert(titleKey: "common.done", messageKey: successMessageKey)
     }
 
-    private func failOperation(_ error: PatchPackageError) {
+    private func failOperation(_ error: PatchPackageError, underlying: Error? = nil) {
         isBusy = false
+        if let underlying {
+            log("patch import failed: \(underlying)")
+        }
         present(error)
     }
 
