@@ -103,7 +103,11 @@ final class PatchProjectStore: ObservableObject {
     }
 
     func importPackage(at sourceURL: URL) {
-        guard !isBusy else { return }
+        log("patch import: picked \(sourceURL.lastPathComponent)")
+        guard !isBusy else {
+            log("patch import: ignored because store is busy")
+            return
+        }
         isBusy = true
         let hasAccess = sourceURL.startAccessingSecurityScopedResource()
         Task.detached(priority: .userInitiated) { [weak self] in
