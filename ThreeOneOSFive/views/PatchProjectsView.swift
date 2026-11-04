@@ -247,6 +247,13 @@ struct PatchProjectsView: View {
                 )
                 .ignoresSafeArea()
             }
+            .alert(item: $store.alert) { alert in
+                Alert(
+                    title: Text(language.text(alert.titleKey)),
+                    message: Text(alert.message(language: language)),
+                    dismissButton: .default(Text(language.text("common.ok")))
+                )
+            }
             .alert(item: $wallpaperImportFeedback) { feedback in
                 Alert(
                     title: Text(language.text(feedback.titleKey)),
