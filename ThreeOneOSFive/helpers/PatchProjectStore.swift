@@ -102,6 +102,10 @@ final class PatchProjectStore: ObservableObject {
         }
     }
 
+    private nonisolated static func trace(_ message: String) async {
+        await MainActor.run { log(message) }
+    }
+
     func importPackage(at sourceURL: URL) {
         log("patch import: picked \(sourceURL.lastPathComponent)")
         guard !isBusy else {
@@ -115,16 +119,22 @@ final class PatchProjectStore: ObservableObject {
                 if hasAccess { sourceURL.stopAccessingSecurityScopedResource() }
             }
             do {
+                await Self.trace("patch import: task started")
                 let data = try PatchProjectLibrary.readPackage(at: sourceURL)
+                await Self.trace("patch import: read \(data.count) bytes")
                 let summary = try PatchPackageCodec.inspect(data)
+                await Self.trace("patch import: inspected schema=\(summary.schemaVersion) protected=\(summary.isPasswordProtected)")
                 let existingURL = await self?.existingPackageURL(for: summary.packageID)
+                await Self.trace("patch import: resolved existing=\(existingURL != nil)")
                 if let pending = try Self.persistImportedPackage(
                     data: data,
                     summary: summary,
                     existingURL: existingURL
                 ) {
+                    await Self.trace("patch import: needs password")
                     await self?.requestPassword(pending: pending)
                 } else {
+                    await Self.trace("patch import: persisted")
                     await self?.finishOperation(successMessageKey: "patch.imported_message")
                 }
             } catch let error as PatchPackageError {
