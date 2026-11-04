@@ -20,6 +20,7 @@ struct PatchProjectsView: View {
     @AppStorage(FeatureVisibility.cleanerStorageKey) private var cleanerEnabled = true
     @State private var showCreate = false
     @State private var showImporter = false
+    @State private var pendingPatchImportURL: URL?
     @State private var showWallpaperImporter = false
     @State private var showCleaner = false
     @State private var searchText = ""
@@ -192,7 +193,14 @@ struct PatchProjectsView: View {
                     onOpenLogs: onOpenLogs
                 )
             }
-            .sheet(isPresented: $showImporter) {
+            .sheet(isPresented: $showImporter, onDismiss: {
+                // Start the import only after the picker has fully dismissed.
+                // Alerts raised while a sheet is still dismissing are swallowed,
+                // which is especially common on iOS 15.
+                guard let url = pendingPatchImportURL else { return }
+                pendingPatchImportURL = nil
+                store.importPackage(at: url)
+            }) {
                 FileDocumentPicker(
                     allowedContentTypes: PatchPackagePickerPolicy.allowedContentTypes,
                     copiesSelectedDocument: PatchPackagePickerPolicy.copiesSelectedDocument,
@@ -200,7 +208,7 @@ struct PatchProjectsView: View {
                     onSelection: { result in
                         showImporter = false
                         if case .success(let urls) = result, let url = urls.first {
-                            store.importPackage(at: url)
+                            pendingPatchImportURL = url
                         }
                     },
                     onCancel: {
@@ -247,13 +255,7 @@ struct PatchProjectsView: View {
                 )
                 .ignoresSafeArea()
             }
-            .alert(item: $store.alert) { alert in
-                Alert(
-                    title: Text(language.text(alert.titleKey)),
-                    message: Text(alert.message(language: language)),
-                    dismissButton: .default(Text(language.text("common.ok")))
-                )
-            }
+            .background(PatchStoreAlertHost(store: store))
             .alert(item: $wallpaperImportFeedback) { feedback in
                 Alert(
                     title: Text(language.text(feedback.titleKey)),
@@ -1219,4 +1221,22 @@ private struct PatchActivityView: UIViewControllerRepresentable {
         _ uiViewController: UIActivityViewController,
         context: Context
     ) {}
+}
+
+// iOS 15 only presents one .alert per view reliably, so the store's alert
+// lives in its own host view instead of sharing PatchProjectsView's alerts.
+private struct PatchStoreAlertHost: View {
+    @Environment(\.appLanguage) private var language
+    @ObservedObject var store: PatchProjectStore
+
+    var body: some View {
+        Color.clear
+            .alert(item: $store.alert) { alert in
+                Alert(
+                    title: Text(language.text(alert.titleKey)),
+                    message: Text(alert.message(language: language)),
+                    dismissButton: .default(Text(language.text("common.ok")))
+                )
+            }
+    }
 }
