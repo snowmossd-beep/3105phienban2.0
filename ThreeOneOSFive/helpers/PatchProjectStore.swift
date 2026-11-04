@@ -425,7 +425,9 @@ final class PatchProjectStore: ObservableObject {
     private func failOperation(_ error: PatchPackageError, underlying: Error? = nil) {
         isBusy = false
         if let underlying {
-            log("patch import failed: \(underlying)")
+            log("patch import failed: \(error) / \(underlying)")
+        } else {
+            log("patch import failed: \(error)")
         }
         present(error)
     }
